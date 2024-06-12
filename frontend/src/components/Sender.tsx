@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 export const Sender = () => {
     const [socket, setSocket] = useState<WebSocket | null>(null);
     const [pc, setPC] = useState<RTCPeerConnection | null>(null);
+    const video=useRef<HTMLVideoElement>(null);
 
     useEffect(() => {
         const socket = new WebSocket('ws://localhost:8080');
@@ -51,27 +52,17 @@ export const Sender = () => {
             }));
         }
             
-        getCameraStreamAndSend(pc);
-    }
-
-    const getCameraStreamAndSend = (pc: RTCPeerConnection) => {
-        navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
-            const video = document.createElement('video');
-            video.srcObject = stream;
-            video.play();
-            // this is wrong, should propogate via a component
-            document.body.appendChild(video);
-            stream.getTracks().forEach((track) => {
-                console.error("track added");
-                console.log(track);
-                console.log(pc);
-                pc?.addTrack(track);
-            });
-        });
+        
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        stream.getTracks().forEach(track => pc.addTrack(track, stream));
+        if (video.current) {
+            video.current.srcObject = stream;
+        }
     }
 
     return <div>
         Sender
         <button onClick={initiateConn}> Send data </button>
+        <video ref={video} autoPlay playsInline/>
     </div>
 }
