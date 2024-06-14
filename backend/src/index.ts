@@ -1,56 +1,38 @@
 import { WebSocket, WebSocketServer } from 'ws';
 
 const wss = new WebSocketServer({ port: 8080 });
-
-let senderSocket: WebSocket | null = null; // Initialize senderSocket as null
-let receiverSockets: WebSocket[] = [];
+let meetings=new Map<number,string>();
+let socket:WebSocket;
 
 wss.on('connection', function connection(ws) {
-  ws.on('error', console.error);
+  console.log('Client connected');
+
+  ws.on('error', (error) => {
+    console.error('WebSocket error:', error);
+  });
 
   ws.on('message', function message(data: any) {
     try {
       const message = JSON.parse(data);
-      switch (message.type) {
-        case 'sender':
-          console.log("Sender added");
-          senderSocket = ws;
-          break;
-        case 'receiver':
-          console.log("Receiver added");
-          receiverSockets.push(ws);
-          break;
-        case 'createOffer':
-          if (ws !== senderSocket) {
-            return;
-          }
-          console.log("Sending offer");
-          receiverSockets.forEach((socket) => {
-            socket.send(JSON.stringify({ type: 'createOffer', sdp: message.sdp }));
-          });
-          break;
-        case 'createAnswer':
-          if (!receiverSockets.includes(ws)) {
-            return;
-          }
-          console.log("Sending answer");
-          senderSocket?.send(JSON.stringify({ type: 'createAnswer', sdp: message.sdp }));
-          break;
-        case 'iceCandidate':
-          console.log("Sending ICE candidate");
-          if (ws === senderSocket) {
-            receiverSockets.forEach((socket) => {
-              socket.send(JSON.stringify({ type: 'iceCandidate', candidate: message.candidate }));
-            });
-          } else if (receiverSockets.includes(ws)) {
-            senderSocket?.send(JSON.stringify({ type: 'iceCandidate', candidate: message.candidate }));
-          }
-          break;
-        default:
-          console.error("Unknown message type:", message.type);
+      if(message.type==='login'){
+        ws.send("success");
+      } else if(message.type==='createMeeting'){
+          const meetingId=Math.round(Math.random()*1000000);
+          meetings.set(meetingId,message.id);
+          socket=ws;
+          ws.send(JSON.stringify({type:"meetingId",id:meetingId}));
+      } else if(message.type==='joinMeeting'){
+          socket.send(JSON.stringify({type:"newMember"}));
+          ws.send(JSON.stringify({type:"joinMeeting",id:meetings.get(message.id)}))
       }
-    } catch (e) {
-      console.error("Failed to parse message:", e);
+    } catch (error) {
+      console.error('Error processing message:', error);
     }
   });
+
+  ws.on('close', () => {
+    console.log('Client disconnected');
+    ws.close();
+    }
+  );
 });
