@@ -8,10 +8,10 @@ const User = () => {
     const video3=useRef<HTMLVideoElement>(null);
     const [socket,useSocket]=useState<WebSocket>();
     useEffect(()=>{
-        if(!process.env.BACKEND_URL){
+        if(!import.meta.env.VITE_BACKEND_URL){
             alert("The backend server is down");
         }
-        const socket=new WebSocket(process.env.BACKEND_URL||"");
+        const socket=new WebSocket(import.meta.env.VITE_BACKEND_URL!);
         useSocket(socket);
         socket.addEventListener("open",()=>{
             socket.send(JSON.stringify({type:'login'}));
